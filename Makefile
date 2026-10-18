@@ -6,7 +6,8 @@ CFLAGS = -Wall -Wextra -Werror -Iinclude
 SRC = src/main.c \
       src/cat.c \
       src/tail.c \
-      src/utils.c
+      src/utils.c \
+	  src/grep.c
 
 OBJ = $(SRC:.c=.o)
 

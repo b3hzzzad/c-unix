@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-
-#include "cat.h"
-#include "tail.h"
+#include "cunix.h"
 
 static void print_usage(const char *program)
 {
@@ -12,28 +6,35 @@ static void print_usage(const char *program)
     printf("  %s cat <file>\n", program);
     printf("  %s tail <file>\n", program);
     printf("  %s tail -n <lines> <file>\n", program);
+    printf("  %s grep <pattern> <file>\n", program);
     printf("  %s --help\n", program);
 }
 
 static int run_tail(int argc, char **argv)
 {
-    char *end;
-    unsigned long lines;
+    char            *end;
+    unsigned long   lines;
 
     if (argc == 3)
         return tail(argv[2], 10);
 
     if (argc != 5 || strcmp(argv[2], "-n") != 0)
+    {
+        fprintf(stderr, "Usage: %s tail [-n lines] <file>\n", argv[0]);
         return 1;
+    }
 
     if (argv[3][0] == '-')
+    {
+        fprintf(stderr, "tail: invalid line count\n");
         return 1;
+    }
 
     errno = 0;
     lines = strtoul(argv[3], &end, 10);
 
     if (errno == ERANGE || end == argv[3] || *end != '\0'
-        || lines > (size_t)-1)
+        || lines > SIZE_MAX)
     {
         fprintf(stderr, "tail: invalid line count\n");
         return 1;
@@ -44,8 +45,6 @@ static int run_tail(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-    int status;
-
     if (argc == 2 && strcmp(argv[1], "--help") == 0)
     {
         print_usage(argv[0]);
@@ -65,17 +64,21 @@ int main(int argc, char **argv)
             fprintf(stderr, "Usage: %s cat <file>\n", argv[0]);
             return 1;
         }
-        return mini_cat(argv[2]);
+        return cat(argv[2]);
     }
 
     if (strcmp(argv[1], "tail") == 0)
+        return run_tail(argc, argv);
+
+    if (strcmp(argv[1], "grep") == 0)
     {
-        status = run_tail(argc, argv);
-        if (status != 0 && argc != 3
-            && (argc != 5 || strcmp(argv[2], "-n") != 0))
+        if (argc != 4)
+        {
             fprintf(stderr,
-                "Usage: %s tail [-n lines] <file>\n", argv[0]);
-        return status;
+                "Usage: %s grep <pattern> <file>\n", argv[0]);
+            return 1;
+        }
+        return grep(argv[3], argv[2]);
     }
 
     fprintf(stderr, "Unknown command: %s\n", argv[1]);

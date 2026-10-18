@@ -1,9 +1,4 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdlib.h>
-
-#include "utils.h"
+#include "cunix.h"
 
 #define BUFFER_SIZE 4096
 
