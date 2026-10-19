@@ -21,7 +21,7 @@ char *ft_realloc(char *temp, size_t *current_size)
 }
 
 /* Returns 0 on success, 1 on failure. */
-int grep(char *file_path, char *to_find)
+int grep_function(char *file_path, char *to_find)
 {
     char    buffer[BUFFER_SIZE];
     char    *temp = NULL;
@@ -113,5 +113,19 @@ int grep(char *file_path, char *to_find)
         return 1;
     }
     free(temp);
+    return 0;
+}
+
+int grep(int ac, char **av)
+{
+    if(ac < 0)
+        return 0;
+    if(ac == 2)
+        grep_function(av[2], av[1]);
+    else if(ac > 2)
+    {
+        for(int i = 2; i < ac; i++)
+            grep_function(av[i], av[1]);
+    }
     return 0;
 }

@@ -4,10 +4,10 @@ CC = cc
 CFLAGS = -Wall -Wextra -Werror -Iinclude
 
 SRC = src/main.c \
-      src/cat.c \
       src/tail.c \
-      src/utils.c \
-	  src/grep.c
+	  src/cat.c \
+	  src/grep.c \
+	  src/utils.c
 
 OBJ = $(SRC:.c=.o)
 

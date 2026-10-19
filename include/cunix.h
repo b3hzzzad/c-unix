@@ -12,15 +12,11 @@
 #include <sys/types.h>
 
 /* Commands */
-int cat(const char *file_path);
-int tail(char *file_path, size_t lines_to_print);
-
-int grep(char *file_path, char *to_find);
+int cat(int argc, char **argv);
+int ft_tail(int ac, char **av);
+int grep(int ac, char **av);
 
 /* Utilities */
 int ft_write(char *str, size_t length);
-
-ssize_t read_all(char *buffer, ssize_t total_bytes, int fd);
-int write_all(char *buffer, int fd);
 
 #endif
