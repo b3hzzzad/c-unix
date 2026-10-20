@@ -34,7 +34,8 @@ A custom implementation of the Unix grep command for searching text within files
 | Command | Description |
 | grep <pattern> <file> | Search for a substring and print matching lines. |
 | grep <pattern> <file1> <file2> | Search for a substring across multiple files. |
-| grep -n <patterm> <file> | Display matching lines prefixed with their line numbers.
+| grep -n <patterm> <file> | Display matching lines prefixed with their line numbers. |
+| grep -v <patterm> <file> | Print lines that do not match. |
 
 **Usage:**
 
@@ -43,6 +44,7 @@ A custom implementation of the Unix grep command for searching text within files
 ./cunix grep error log1.txt log2.txt
 ./cunix grep "hello world" file.txt
 ./cunix grep -n "test" file.txt
+./cunix grep -v "test" file.txt
 ```
 
 3. tail
