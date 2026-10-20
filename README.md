@@ -37,6 +37,7 @@ A custom implementation of the Unix grep command for searching text within files
 | grep -n <patterm> <file> | Display matching lines prefixed with their line numbers. |
 | grep -v <patterm> <file> | Print lines that do not match. |
 | grep -c <patterm> <file> | Print the number of matching lines. |
+| grep -q <patterm> <file> | Don't print anything; indicate whether a match exists through exit status |
 
 **Usage:**
 
@@ -47,6 +48,7 @@ A custom implementation of the Unix grep command for searching text within files
 ./cunix grep -n "test" file.txt
 ./cunix grep -v "test" file.txt
 ./cunix grep -c "test" file.txt
+./cunix grep -q "test" file.txt
 ```
 
 3. tail

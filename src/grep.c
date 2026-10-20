@@ -2,24 +2,6 @@
 
 #define BUFFER_SIZE 4096
 
-//allocate memory for temp
-char *ft_realloc(char *temp, size_t *current_size)
-{
-    char    *new_temp;
-    size_t  new_size;
-
-    if (*current_size == 0)
-        new_size = BUFFER_SIZE;
-    else
-        new_size = *current_size * 2;
-
-    new_temp = realloc(temp, new_size * sizeof(char));
-    if (new_temp == NULL)
-        return NULL;
-    *current_size = new_size;
-    return new_temp;
-}
-
 /* Returns 0 on success, 1 on failure. */
 int grep_function(char *file_path, char *to_find)
 {
@@ -27,10 +9,9 @@ int grep_function(char *file_path, char *to_find)
     char    *temp = NULL;
     char    *new_temp;
     ssize_t bytes_read;
-    size_t  line_length;
-    size_t  temp_capacity;
+    size_t  index;
+    size_t  capacity;
     int     fd;
-    int     i;
 
     if(file_path == NULL || to_find == NULL)
     {
@@ -44,44 +25,49 @@ int grep_function(char *file_path, char *to_find)
         return 1;
     }
 
-    line_length = 0;
-    temp_capacity = 0;
+    temp = malloc(BUFFER_SIZE);
+    if(temp == NULL)
+    {
+        perror("malloc");
+        close(fd);
+        return 1;
+    }
+
+    index = 0;
+    capacity = BUFFER_SIZE;
     while((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
     {
-        i = 0;
-        while(i < bytes_read)
+        for(int i = 0; i < bytes_read; i++)
         {
-            if(line_length + 1 >= temp_capacity)
+            if(index + 1 >= capacity)
             {
-                new_temp = ft_realloc(temp, &temp_capacity);
+                capacity *= 2;
+                new_temp = realloc(temp, capacity);
                 if(new_temp == NULL)
                 {
                     perror("realloc");
-                    free(temp);
                     close(fd);
                     return 1;
                 }
                 temp = new_temp;
             }
-            temp[line_length] = buffer[i];
+            temp[index] = buffer[i];
             if(buffer[i] == '\n')
             {
-                temp[line_length] = '\0';
-                if(strstr(temp, to_find))
+                temp[index + 1] = '\0';
+                if(strstr(temp, to_find) == NULL)
                 {
-                    if (ft_write(temp, line_length) != 0 ||
-                        ft_write("\n", 1) != 0)
+                    if (ft_write(temp, index) != 0)
                     {
                         free(temp);
                         close(fd);
                         return 1;
                     }
                 }
-                line_length = 0;
+                index = 0;
             }
             else
-                line_length++;
-            i++;
+                index++;
         }
     }
     if(bytes_read < 0)
@@ -92,13 +78,12 @@ int grep_function(char *file_path, char *to_find)
             return 1;
         }
     // Last line in the file (if it doesn't end with a newline)
-    if(line_length > 0)
+    if(index > 0)
     {
-        temp[line_length] = '\0';  
-        if(strstr(temp, to_find))
+        temp[index + 1] = '\0';  
+        if(strstr(temp, to_find) == NULL)
         {
-            if (ft_write(temp, line_length) != 0 ||
-                ft_write("\n", 1) != 0)
+            if (ft_write(temp, index) != 0)
             {
                 free(temp);
                 close(fd);
@@ -384,6 +369,99 @@ int grep_c(char *file_path, char *to_find)
     ft_write("\n", 1);
 
     return 0;
+}
+
+//  Exit code 0: A match was found.
+//  Exit code 1: No match was found.
+//  Exit code >1: An error occurred.
+int grep_q(char *file_path, char *to_find)
+{
+    char    buffer[BUFFER_SIZE];
+    char    *temp;
+    char    *new_temp;
+    size_t  capacity;
+    size_t  index;
+    ssize_t bytes_read;
+    int     fd;
+
+    if(file_path == NULL)
+    {
+        fprintf(stderr, "invalid file path.\n");
+        return 2;
+    }
+    fd = open(file_path, O_RDONLY);
+    if(fd < 0)
+    {
+        perror(file_path);
+        return 2;
+    }
+    temp = malloc(BUFFER_SIZE);
+    if(temp == NULL)
+    {
+        perror("malloc");
+        close(fd);
+        return 2;
+    }
+    index = 0;
+    capacity = BUFFER_SIZE;
+    while((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
+    {
+        for(int i = 0; i < bytes_read; i++)
+        {
+            if(index + 1 >= capacity)
+            {
+                capacity *= 2;
+                new_temp = realloc(temp, capacity);
+                if(new_temp == NULL)
+                {
+                    perror("realloc");
+                    close(fd);
+                    free(temp);
+                    return 2;
+                }
+                temp = new_temp;
+            }
+            temp[index] = buffer[i];
+            if(buffer[i] == '\n')
+            {
+                temp[index] = '\0';
+                if(strstr(temp, to_find) != NULL)
+                {
+                    free(temp);
+                    close(fd);
+                    return 0; //fount match so its done.
+                }
+                index = 0;
+            }
+            else
+                index++;
+        }
+    }
+    if(index > 0)
+    {
+        temp[index] = '\0';
+        if(strstr(temp, to_find) != NULL)
+        {
+            free(temp);
+            close(fd);
+            return 0; //fount match so its done.
+        }
+    }
+        if(bytes_read < 0)
+    {
+        perror("read");
+        free(temp);
+        close(fd);
+        return 1;
+    }
+    if(close(fd) == -1)
+    {
+        perror("close");
+        free(temp);
+        return 1;
+    }
+    free(temp);
+    return 1;
 }
 
 int grep(int ac, char **av)
