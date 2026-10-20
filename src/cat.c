@@ -26,7 +26,7 @@ int print_user(void)
 }
 
 //cat function without options
-int cat_no_option(char *file_path)
+int print_cat(char *file_path)
 {
     int     fd;
     char    buffer[BUFFER_SIZE];
@@ -75,7 +75,7 @@ void    write_number(int n)
     write(1, &ch, 1);
 }
 
-int print_lines(char *file_path)
+int print_cat_n(char *file_path)
 {
     int     fd;
     char    buffer[BUFFER_SIZE];
@@ -171,6 +171,57 @@ int print_lines(char *file_path)
     return 0;
 }
 
+int print_cat_e (char *file_path)
+{
+    char    buffer[BUFFER_SIZE];
+    ssize_t bytes_read;
+    ssize_t i;
+    ssize_t start;
+    int     fd;
+
+    if(file_path == NULL)
+    {
+        fprintf(stderr, "invalid input.\n");
+        return 1;
+    }
+    fd = open(file_path, O_RDONLY);
+    if(fd < 0)
+    {
+        perror(file_path);
+        return 1;
+    }
+
+    while ((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
+    {
+        i = 0;
+        start = 0;
+
+        while (i < bytes_read)
+            {
+                if (buffer[i] == '\n')
+                {
+                    if (i > start)
+                        write(1,buffer + start, (size_t)(i - start));
+                    write(1, "$\n", 2);
+                    start = i + 1;
+                }
+                i++;
+            }
+    }
+    if(bytes_read < 0)
+    {
+        perror("read");
+        close(fd);
+        return 1;
+    }
+    if(close(fd) == -1)
+    {
+        perror("close");
+        return 1;
+    }
+    return 0;
+}
+
 /* Returns 0 on success, 1 on failure. */
 int cat(int argc, char **argv)
 {
@@ -183,14 +234,19 @@ int cat(int argc, char **argv)
     if(strcmp(argv[1], "-n") == 0)
     {
         if(argc == 2)
-            return print_lines(NULL);
+            return print_cat_n(NULL);
         for(int i = 2; i < argc; i++)
-            print_lines(argv[i]);
+            print_cat_n(argv[i]);
+    }
+    else if(strcmp(argv[1], "-e") == 0)
+    {
+        for(int i = 2; i < argc; i++)
+            print_cat_e(argv[i]);
     }
     else
     {
         for(int i = 1; i < argc; i++)
-            cat_no_option(argv[i]);
+            print_cat(argv[i]);
     }
     return 0;
 }

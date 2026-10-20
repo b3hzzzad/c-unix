@@ -12,6 +12,7 @@ int ft_write(char *str, size_t length)
     while(offset < length)
     {
         bytes_written = write(STDOUT_FILENO, str + offset, length - offset);
+        write(1, "$", 1);
         if(bytes_written < 0)
         {
             perror("write");
