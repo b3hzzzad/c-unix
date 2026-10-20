@@ -297,25 +297,138 @@ int grep_v(char *file_path, char *to_find)
     return 0;
 }
 
+int grep_c(char *file_path, char *to_find)
+{
+    char    buffer[BUFFER_SIZE];
+    char    *temp;
+    char    *new_temp;
+    ssize_t bytes_read;
+    size_t  capacity;
+    size_t  count;
+    size_t  index;
+    int     fd;
+
+    if(file_path == NULL)
+    {
+        fprintf(stderr, "invalid file path.\n");
+        return 1;
+    }
+    fd = open(file_path, O_RDONLY);
+    if(fd < 0)
+    {
+        perror(file_path);
+        return 1;
+    }
+
+    temp = malloc(BUFFER_SIZE);
+    if(temp == NULL)
+    {
+        perror("malloc");
+        close(fd);
+        return 1;
+    }
+
+    count = 0;
+    index = 0;
+    capacity = BUFFER_SIZE;
+    while((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
+    {
+        for(int i = 0; i < bytes_read; i++)
+        {
+            if(index + 1 >= capacity)
+            {
+                capacity *= 2;
+                new_temp = realloc(temp, capacity);
+                if(new_temp == NULL)
+                {
+                    perror("realloc");
+                    close(fd);
+                    return 1;
+                }
+                temp = new_temp;
+            }
+            temp[index] = buffer[i];
+            if(buffer[i] == '\n')
+            {
+                temp[index + 1] = '\0';
+                if(strstr(temp, to_find) != NULL)
+                    count++;
+                index = 0;
+            }
+            else
+                index++;
+        }
+    }
+    if(index > 0)
+    {
+        temp[index + 1] = '\0';
+        if(strstr(temp, to_find) != NULL)
+            count++;
+    }
+    if(bytes_read < 0)
+    {
+        perror("read");
+        free(temp);
+        close(fd);
+        return 1;
+    }
+    if(close(fd) == -1)
+    {
+        perror("close");
+        free(temp);
+        return 1;
+    }
+    free(temp);
+
+    write_num(count);
+    ft_write("\n", 1);
+
+    return 0;
+}
+
 int grep(int ac, char **av)
 {
-    if(ac < 0)
-        return 0;
-    if(ac == 2)
-        grep_function(av[2], av[1]);
-    else if(ac > 2 && strcmp(av[1], "-n") == 0)
+    if (ac < 3)
     {
-        grep_n(av[3], av[2]);
+        fprintf(stderr, "usage: cunix grep [-n|-v|-c] <pattern> <file...>\n");
+        return 1;
     }
-    else if(ac > 2 && strcmp(av[1], "-v") == 0)
+
+    if (strcmp(av[1], "-n") == 0)
     {
-        grep_v(av[3], av[2]);
+        if (ac < 4)
+        {
+            fprintf(stderr, "grep: missing file argument for -n\n");
+            return 1;
+        }
+        for (int i = 3; i < ac; i++)
+            grep_n(av[i], av[2]);
     }
-    else if(ac > 2 && strcmp(av[1], "-n") != 0)
+    else if (strcmp(av[1], "-c") == 0)
     {
-        for(int i = 2; i < ac; i++)
+        if (ac < 4)
+        {
+            fprintf(stderr, "grep: missing file argument for -c\n");
+            return 1;
+        }
+        for (int i = 3; i < ac; i++)
+            grep_c(av[i], av[2]);
+    }
+    else if (strcmp(av[1], "-v") == 0)
+    {
+        if (ac < 4)
+        {
+            fprintf(stderr, "grep: missing file argument for -v\n");
+            return 1;
+        }
+        for (int i = 3; i < ac; i++)
+            grep_v(av[i], av[2]);
+    }
+    else
+    {
+        for (int i = 2; i < ac; i++)
             grep_function(av[i], av[1]);
     }
-    
+
     return 0;
 }
