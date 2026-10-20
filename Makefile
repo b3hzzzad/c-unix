@@ -1,7 +1,7 @@
 NAME = cunix
 
 CC = cc
-CFLAGS = -Wall -Wextra -Werror -Iinclude
+CFLAGS = -Wall -Wextra -Werror -g -Iinclude
 
 SRC = src/main.c \
       src/tail.c \
