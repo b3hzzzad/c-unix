@@ -13,7 +13,7 @@
 
 /* Commands */
 int cat(int argc, char **argv);
-int ft_tail(int ac, char **av);
+int tail(int ac, char **av);
 int grep(int ac, char **av);
 
 /* Utilities */

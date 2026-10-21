@@ -65,15 +65,16 @@ A custom implementation of the Unix tail command using backward file scanning.
 | tail -n <N> <file> | Display the last N lines of a file. |
 | tail <file1> <file2> | Display the last 10 lines of multiple files with filename headers. |
 | tail -n <N> <file1> <file2> | Display the last N lines of multiple files with filename headers. |
+| tail -q <file1> <file2> | Never display filename headers. |
+| tail -v <file1> <file2> | Always display filename headers. |
 
 **Usage:**
 
 ```bash
-./cunix tail file.txt
-./cunix tail -n 5 file.txt
-./cunix tail -n 20 large_file.txt
 ./cunix tail file1.txt file2.txt
-./cunix tail -n 5 file1.txt file2.txt
+./cunix tail -n <N> file1.txt file2.txt
+./cunix tail -q file1.txt file2.txt
+./cunix tail -v file1.txt file2.txt
 ```
 
 ## Project Structure

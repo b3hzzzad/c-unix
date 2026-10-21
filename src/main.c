@@ -29,7 +29,7 @@ int main(int argc, char **argv)
     else if(strcmp(argv[1], "grep") == 0)
         return grep(argc - 1, argv + 1);
     else if(strcmp(argv[1], "tail") == 0)
-        return ft_tail(argc - 1, argv + 1);
+        return tail(argc - 1, argv + 1);
     
     return 0;
 }

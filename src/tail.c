@@ -75,7 +75,7 @@ int tail_lseek(char *file_path, int lines)
     ssize_t bytes_to_print;
     size_t  chunks;
     size_t  count_lines;
-    ssize_t  remaining_bytes;
+    ssize_t remaining_bytes;
     int     fd;
 
     if(file_path == NULL || lines < 0)
@@ -178,40 +178,75 @@ int tail_lseek(char *file_path, int lines)
 }
 
 /* Returns 0 on success, 1 on failure. */
-int ft_tail(int ac, char **av)
+int tail(int argc, char **argv)
 {
-    int i = 1;
+    int status;
+    int i;
+    int lines;
+    int quiet;
     int start;
-    int lines = 10;
-    int status = 0;
+    int multiple_files;
+    int add_header;
 
-    if (ac < 2)
+    if (argc < 1 || argv == NULL)
         return 1;
 
-    if (strcmp(av[i], "-n") == 0)
-    {
-        if (ac < 4)
-            return 1;
+    if (argc == 1)
+        return tail_lseek(NULL, 10);
 
-        lines = atoi(av[2]);
-        i = 3;
+    status = 0;
+    lines = 10;
+    quiet = 0;
+    add_header = 0;
+    i = 1;
+
+    while (i < argc && argv[i][0] == '-')
+    {
+        if (strcmp(argv[i], "-q") == 0)
+        {
+            quiet = 1;
+            add_header = 0;
+            i++;
+        }
+        else if(strcmp(argv[i], "-v") == 0)
+        {
+            add_header = 1;
+            quiet = 0;
+            i++;
+        }
+        else if (strcmp(argv[i], "-n") == 0)
+        {
+            if (i + 1 >= argc)
+                return 1;
+            lines = atoi(argv[i + 1]);
+            i += 2;
+        }
+        else
+        {
+            break;
+        }
     }
 
     start = i;
 
-    while (i < ac)
+    if (start >= argc)
+        return tail_lseek(NULL, lines);
+
+    multiple_files = (!quiet && (add_header || (argc - start > 1)));
+
+    i = start;
+    while (i < argc)
     {
-        if (ac - start > 1)
+        if (multiple_files)
         {
             if (i > start)
                 write(1, "\n", 1);
-
             write(1, "==> ", 4);
-            write(1, av[i], strlen(av[i]));
+            write(1, argv[i], strlen(argv[i]));
             write(1, " <==\n", 5);
         }
 
-        if (tail_lseek(av[i], lines) != 0)
+        if (tail_lseek(argv[i], lines) != 0)
             status = 1;
 
         i++;
