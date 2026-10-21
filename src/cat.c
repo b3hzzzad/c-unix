@@ -2,7 +2,7 @@
 
 #define BUFFER_SIZE 4096
 
-/* Print stdin to stdout. */
+// Print stdin to stdout.
 int print_user(void)
 {
     char    buffer[BUFFER_SIZE];
@@ -73,14 +73,16 @@ int write_number(size_t n)
 }
 
 /* Print file contents with line numbers. */
-int print_cat_n(char *file_path)
+int cat_n(char *file_path)
 {
     char    buffer[BUFFER_SIZE];
+    char    *temp = NULL;
+    char    *new_temp;
+    size_t  capacity;
+    size_t  index;
     ssize_t bytes_read;
-    size_t  line_count;
+    size_t  count_lines;
     int     fd;
-    int     status;
-    int     at_line_start;
 
     if (file_path == NULL || strcmp(file_path, "-") == 0)
         fd = STDIN_FILENO;
@@ -94,81 +96,104 @@ int print_cat_n(char *file_path)
         }
     }
 
-    line_count = 1;
-    at_line_start = 1;
-    status = 0;
+    temp = malloc(BUFFER_SIZE);
+    if(temp == NULL)
+    {
+        perror("malloc");
+        if (fd != STDIN_FILENO)
+            close(fd);
+        return 1;
+    }
 
+    capacity = BUFFER_SIZE;
+    index = 0;
+    count_lines = 1;
     while ((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
     {
-        ssize_t i = 0;
-        ssize_t start = 0;
-
-        while (i < bytes_read)
+        for(int i = 0; i < bytes_read; i++)
         {
-            if (at_line_start)
+            if(index + 1 >= capacity)
             {
-                if (write_number(line_count) != 0
-                    || ft_write("\t", 1) != 0)
+                capacity *= 2;
+                new_temp = realloc(temp, capacity);
+                if(new_temp == NULL)
                 {
-                    status = 1;
-                    break;
+                    perror("realloc");
+                    if (fd != STDIN_FILENO)
+                        close(fd);
+                    free(temp);
+                    return 1;
                 }
-                line_count++;
-                at_line_start = 0;
+                temp = new_temp;
             }
-
-            if (buffer[i] == '\n')
+            temp[index] = buffer[i];
+            if(buffer[i] == '\n')
             {
-                if (ft_write(buffer + start,
-                        (size_t)(i - start + 1)) != 0)
+                temp[index + 1] = '\0';
+                write(1, "\t", 1);
+                write_number(count_lines);
+                write(1, "  ", 2);
+                if(ft_write(temp, index + 1) != 0)
                 {
-                    status = 1;
-                    break;
+                    perror("write");
+                    if (fd != STDIN_FILENO)
+                        close(fd);
+                    free(temp);
+                    return 1;
                 }
-                start = i + 1;
-                at_line_start = 1;
+                count_lines++;
+                index = 0;
             }
-            i++;
+            else
+                index++;
         }
+    }
 
-        if (status != 0)
-            break;
-
-        if (start < bytes_read)
+    if(index > 0)
+    {
+        temp[index] = '\0';
+        write(1, "\t", 1);
+        write_number(count_lines);
+        write(1, "  ", 2);
+        if(ft_write(temp, index) != 0)
         {
-            if (ft_write(buffer + start,
-                    (size_t)(bytes_read - start)) != 0)
-            {
-                status = 1;
-                break;
-            }
-        }
+            perror("write");
+            if (fd != STDIN_FILENO)
+                close(fd);
+            free(temp);
+            return 1;
+        }  
     }
 
     if (bytes_read < 0)
     {
         perror("read");
-        status = 1;
+        free(temp);
+        if (fd != STDIN_FILENO)
+            close(fd);
+        return 1;
     }
 
     if (fd != STDIN_FILENO && close(fd) < 0)
     {
         perror("close");
-        status = 1;
+        free(temp);
+        return 1;
     }
-
-    return status;
+    free(temp);
+    return 0;
 }
 
-/* Display '$' before each newline. */
-int print_cat_e(char *file_path)
+// Display '$' after each newline.
+int cat_e(char *file_path)
 {
     char    buffer[BUFFER_SIZE];
+    char    *temp;
+    char    *new_temp;
+    size_t  capacity;
+    size_t  index;
     ssize_t bytes_read;
-    ssize_t i;
-    ssize_t start;
     int     fd;
-    int     status;
 
     if (file_path == NULL || strcmp(file_path, "-") == 0)
         fd = STDIN_FILENO;
@@ -182,56 +207,212 @@ int print_cat_e(char *file_path)
         }
     }
 
-    status = 0;
+    temp = malloc(BUFFER_SIZE);
+    if(temp == NULL)
+    {
+        perror("malloc");
+        if (fd != STDIN_FILENO)
+            close(fd);
+        return 1;
+    }
 
+    capacity = BUFFER_SIZE;
+    index = 0;
     while ((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
     {
-        start = 0;
-        i = 0;
-
-        while (i < bytes_read)
+        for(int i = 0; i < bytes_read; i++)
         {
-            if (buffer[i] == '\n')
+            if(index + 1 >= capacity)
             {
-                if (ft_write(buffer + start,
-                        (size_t)(i - start)) != 0
-                    || ft_write("$\n", 2) != 0)
+                capacity *= 2;
+                new_temp = realloc(temp, capacity);
+                if(new_temp == NULL)
                 {
-                    status = 1;
-                    break;
+                    perror("realloc");
+                    free(temp);
+                    if (fd != STDIN_FILENO)
+                        close(fd);
+                    return 1;
                 }
-                start = i + 1;
+                temp = new_temp;
             }
-            i++;
-        }
-
-        if (status != 0)
-            break;
-
-        if (start < bytes_read)
-        {
-            if (ft_write(buffer + start,
-                    (size_t)(bytes_read - start)) != 0)
+            temp[index] = buffer[i];
+            if(buffer[i] == '\n')
             {
-                status = 1;
-                break;
+                temp[index + 1] = '\0';
+                if(ft_write(temp, index) != 0)
+                {
+                    perror("write");
+                    free(temp);
+                    if (fd != STDIN_FILENO)
+                        close(fd);
+                    return 1;
+                }
+                write(1, "$\n", 2);
+                index = 0;
             }
+            else
+                index++;
         }
+        
+    }
+
+    if(index > 0)
+    {
+        temp[index] = '\0';
+        if(ft_write(temp, index) != 0)
+        {
+            perror("write");
+            free(temp);
+            if (fd != STDIN_FILENO)
+                close(fd);
+            return 1;
+        }
+        write(1, "$\n", 2);
     }
 
     if (bytes_read < 0)
     {
         perror("read");
-        status = 1;
+        if (fd != STDIN_FILENO)
+            close(fd);
+        free(temp);
+        return 1;
     }
 
     if (fd != STDIN_FILENO && close(fd) < 0)
     {
         perror("close");
-        status = 1;
+        free(temp);
+        return 1;
+    }
+    free(temp);
+    return 0;
+}
+
+int cat_b(char *file_path)
+{
+    char    buffer[BUFFER_SIZE];
+    char    *temp = NULL;
+    char    *new_temp;
+    size_t  capacity;
+    size_t  index;
+    ssize_t bytes_read;
+    size_t  count_lines;
+    int     fd;
+
+    if (file_path == NULL || strcmp(file_path, "-") == 0)
+        fd = STDIN_FILENO;
+    else
+    {
+        fd = open(file_path, O_RDONLY);
+        if (fd < 0)
+        {
+            perror(file_path);
+            return 1;
+        }
     }
 
-    return status;
+    temp = malloc(BUFFER_SIZE);
+    if(temp == NULL)
+    {
+        perror("malloc");
+        if (fd != STDIN_FILENO)
+            close(fd);
+        return 1;
+    }
+
+    capacity = BUFFER_SIZE;
+    index = 0;
+    count_lines = 1;
+    while ((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
+    {
+        for(int i = 0; i < bytes_read; i++)
+        {
+            if(index + 1 >= capacity)
+            {
+                capacity *= 2;
+                new_temp = realloc(temp, capacity);
+                if(new_temp == NULL)
+                {
+                    perror("realloc");
+                    if (fd != STDIN_FILENO)
+                        close(fd);
+                    free(temp);
+                    return 1;
+                }
+                temp = new_temp;
+            }
+            temp[index] = buffer[i];
+            if(buffer[i] == '\n')
+            {
+                temp[index + 1] = '\0';
+                if(index == 0)
+                {
+                    if(ft_write(temp, index + 1) != 0)
+                    {
+                        perror("write");
+                        if (fd != STDIN_FILENO)
+                            close(fd);
+                        free(temp);
+                        return 1;
+                    }
+                }
+                else
+                {
+                    write(1, "\t", 1);
+                    write_number(count_lines);
+                    write(1, "  ", 2);
+                    if(ft_write(temp, index + 1) != 0)
+                    {
+                        perror("write");
+                        if (fd != STDIN_FILENO)
+                            close(fd);
+                        free(temp);
+                        return 1;
+                }
+                count_lines++;
+                index = 0;
+            }
+            }
+            else
+                index++;
+        }
+    }
+
+    if(index > 0)
+    {
+        temp[index] = '\0';
+        write(1, "\t", 1);
+        write_number(count_lines);
+        write(1, "  ", 2);
+        if(ft_write(temp, index) != 0)
+        {
+            perror("write");
+            if (fd != STDIN_FILENO)
+                close(fd);
+            free(temp);
+            return 1;
+        }  
+    }
+
+    if (bytes_read < 0)
+    {
+        perror("read");
+        free(temp);
+        if (fd != STDIN_FILENO)
+            close(fd);
+        return 1;
+    }
+
+    if (fd != STDIN_FILENO && close(fd) < 0)
+    {
+        perror("close");
+        free(temp);
+        return 1;
+    }
+    free(temp);
+    return 0;
 }
 
 /* Returns 0 on success, 1 on failure. */
@@ -250,12 +431,12 @@ int cat(int argc, char **argv)
     if (strcmp(argv[1], "-n") == 0)
     {
         if (argc == 2)
-            return print_cat_n(NULL);
+            return cat_n(NULL);
 
         i = 2;
         while (i < argc)
         {
-            if (print_cat_n(argv[i]) != 0)
+            if (cat_n(argv[i]) != 0)
                 status = 1;
             i++;
         }
@@ -263,16 +444,31 @@ int cat(int argc, char **argv)
     else if (strcmp(argv[1], "-e") == 0)
     {
         if (argc == 2)
-            return print_cat_e(NULL);
+            return cat_e(NULL);
 
         i = 2;
         while (i < argc)
         {
-            if (print_cat_e(argv[i]) != 0)
+            if (cat_e(argv[i]) != 0)
                 status = 1;
             i++;
         }
     }
+
+    else if (strcmp(argv[1], "-b") == 0)
+    {
+        if (argc == 2)
+            return cat_b(NULL);
+
+        i = 2;
+        while (i < argc)
+        {
+            if (cat_b(argv[i]) != 0)
+                status = 1;
+            i++;
+        }
+    }
+
     else
     {
         i = 1;

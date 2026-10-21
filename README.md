@@ -15,6 +15,8 @@ A custom implementation of the Unix cat command.
 | cat <file> | Display the contents of a file. |
 | cat -n <file> | Display file contents with line numbers. |
 | cat -e <file> | Display `$` at the end of each newline-terminated line. |
+| cat -b <file> | Number only nonempty lines. |
+
 
 **Usage:**
 
@@ -23,6 +25,7 @@ A custom implementation of the Unix cat command.
 ./cunix cat file.txt
 ./cunix cat -n file.txt
 ./cunix cat -e file.txt
+./cunix cat -b file.txt
 ```
 
 2. grep 
