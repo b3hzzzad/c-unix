@@ -18,5 +18,6 @@ int grep(int ac, char **av);
 
 /* Utilities */
 int ft_write(char *str, size_t length);
+void    write_number(int n);
 
 #endif

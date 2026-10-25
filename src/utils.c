@@ -23,3 +23,13 @@ int ft_write(char *str, size_t length)
     }
     return 0;
 }
+
+void    write_number(int n)
+{
+    char    ch;
+
+    if(n >= 10)
+        write_number(n / 10);
+    ch = (n % 10) + '0';
+    write(1, &ch, 1);
+}

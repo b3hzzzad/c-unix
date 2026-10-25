@@ -14,17 +14,6 @@ typedef struct  s_obj
     int     has_newline;
 }   t_obj;
 
-//helper function for print numbers
-void    write_number(int n)
-{
-    char    ch;
-
-    if(n >= 10)
-        write_number(n / 10);
-    ch = (n % 10) + '0';
-    write(1, &ch, 1);
-}
-
 //digit counter helper for cat -n allignment
 size_t  get_digit_count(size_t n)
 {
