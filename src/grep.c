@@ -2,15 +2,65 @@
 
 #define BUFFER_SIZE 4096
 
-/* Returns 0 on success, 1 on failure. */
-int grep_function(char *file_path, char *to_find)
+typedef struct  s_obj
 {
+    char    *temp;
+    char    *flag;
+    size_t  length;
+    size_t  line_count;
+    size_t  match_count;
+
+}   t_obj;
+
+int apply_flag_grep(t_obj *obj, char *to_find)
+{
+    if(obj->flag == NULL)
+    {
+        if(strstr(obj->temp, to_find) != NULL)
+        {
+            if(ft_write(obj->temp, obj->length) != 0)
+                return 1;
+            write(1, "\n", 1);
+        }
+        return 0;
+    }
+    else if(strcmp(obj->flag, "-n") == 0)
+    {
+        if(strstr(obj->temp, to_find) != NULL)
+        {
+            write_number(obj->line_count);
+            write(1, ":", 1);
+            if(ft_write(obj->temp, obj->length) != 0)
+                return 1;
+            write(1, "\n", 1);
+        }
+        return 0;
+    }
+    else if(strcmp(obj->flag, "-v") == 0)
+    {
+        //if it is not match
+        if(strstr(obj->temp, to_find) == NULL)
+        {
+            if(ft_write(obj->temp, obj->length) != 0)
+                return 1;
+            write(1, "\n", 1);
+        }
+        return 0;
+    }
+    return 0;
+}
+
+int run_grep(char *file_path, char *to_find, char *flag)
+{
+    t_obj   *obj;
     char    buffer[BUFFER_SIZE];
     char    *temp = NULL;
     char    *new_temp;
     ssize_t bytes_read;
     size_t  index;
     size_t  capacity;
+    size_t  line_count;
+    size_t  match_count;
     int     fd;
 
     if(file_path == NULL || to_find == NULL)
@@ -33,13 +83,29 @@ int grep_function(char *file_path, char *to_find)
         return 1;
     }
 
+    obj = malloc(sizeof(t_obj));
+    if(obj == NULL)
+    {
+        perror("malloc");
+        close(fd);
+        free(temp);
+        return 1;
+    }
+    obj->temp = NULL;
+    obj->flag = NULL;
+    obj->length = 0;
+    obj->line_count = 0;
+    obj->match_count = 0;
+
     index = 0;
     capacity = BUFFER_SIZE;
+    line_count = 1;
+    match_count = 0;
     while((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
     {
         for(int i = 0; i < bytes_read; i++)
         {
-            if(index + 1 >= capacity)
+            if(index + 2 >= capacity)
             {
                 capacity *= 2;
                 new_temp = realloc(temp, capacity);
@@ -47,6 +113,8 @@ int grep_function(char *file_path, char *to_find)
                 {
                     perror("realloc");
                     close(fd);
+                    free(obj);
+                    free(temp);
                     return 1;
                 }
                 temp = new_temp;
@@ -55,16 +123,39 @@ int grep_function(char *file_path, char *to_find)
             if(buffer[i] == '\n')
             {
                 temp[index + 1] = '\0';
-                if(strstr(temp, to_find) == NULL)
+
+            //handle -q flag
+            if(flag != NULL && strcmp(flag, "-q") == 0)
+            {
+                if(strstr(temp, to_find) != 0)
                 {
-                    if (ft_write(temp, index) != 0)
-                    {
-                        free(temp);
-                        close(fd);
-                        return 1;
-                    }
+                    close(fd);
+                    free(temp);
+                    free(obj);
+                    return 0;
                 }
+            }
+
+                if(strstr(temp, to_find) != NULL)
+                    match_count++;
+
+                obj->temp = temp;
+                obj->length = index;
+                obj->flag = flag;
+                obj->line_count = line_count;
+                obj->match_count = match_count;
+
+                if(apply_flag_grep(obj, to_find) != 0)
+                {
+                    perror("apply_grep");
+                    close(fd);
+                    free(obj);
+                    free(temp);
+                    return 1;  
+                }
+
                 index = 0;
+                line_count++;
             }
             else
                 index++;
@@ -75,437 +166,101 @@ int grep_function(char *file_path, char *to_find)
             perror("read");
             close(fd);
             free(temp);
+            free(obj);
             return 1;
         }
+
     // Last line in the file (if it doesn't end with a newline)
     if(index > 0)
     {
-        temp[index + 1] = '\0';  
-        if(strstr(temp, to_find) == NULL)
+        //handle -q flag
+        if(flag != NULL && strcmp(flag, "-q") == 0)
         {
-            if (ft_write(temp, index) != 0)
+            if(strstr(temp, to_find) != 0)
             {
-                free(temp);
                 close(fd);
-                return 1;
+                free(temp);
+                free(obj);
+                return 0;
             }
         }
-    }
-    if(close(fd) == -1)
-    {
-        perror("close");
-        free(temp);
-        return 1;
-    }
-    free(temp);
-    return 0;
-}
 
-//helper function to print numbers
-void    write_num(int num)
-{
-    char    ch;
-
-    if(num >= 10)
-        write_num(num / 10);
-    ch = (num % 10) + '0';
-    write(1, &ch, 1);
-}
-
-int grep_n(char *file_path, char *to_find)
-{
-    char    buffer[BUFFER_SIZE];
-    char    *temp = NULL;
-    char    *new_temp;
-    size_t  capacity;
-    ssize_t bytes_read;
-    size_t  count_lines;
-    size_t  index;
-    int     fd;
-
-    if(file_path == NULL)
-    {
-        fprintf(stderr, "invalid file path.\n");
-        return 1;
-    }
-    fd = open(file_path, O_RDONLY);
-    if(fd < 0)
-    {
-        perror(file_path);
-        return 1;
-    }
-
-    temp = malloc(BUFFER_SIZE * sizeof(char));
-    if(temp == NULL)
-    {
-        perror("malloc");
-        close(fd);
-        return 1;
-    }
-    capacity = BUFFER_SIZE;
-    count_lines = 0;
-    index = 0;
-    while((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
-    {
-        for(int i = 0; i < bytes_read; i++)
-        {
-            if(index + 1 >= capacity)
-            {
-                capacity *= 2;
-                new_temp = realloc(temp, capacity);
-                if(new_temp == NULL)
-                {
-                    perror("realloc");
-                    close(fd);
-                    return 1;
-                }
-                temp = new_temp;
-            }
-            temp[index] = buffer[i];
-            if(buffer[i] == '\n')
-            {
-                count_lines++;
-                temp[index + 1] = '\0';
-                if(strstr(temp, to_find) != NULL)
-                {
-                    write_num(count_lines);
-                    ft_write(":", 1);
-                    ft_write(temp, index + 1);
-                }
-                index = 0;
-            }
-            else
-                index++;
-        }
-    }
-    if(bytes_read < 0)
-    {
-        perror("read");
-        free(temp);
-        close(fd);
-        return 1;
-    }
-    if(close(fd) == -1)
-    {
-        perror("close");
-        free(temp);
-        return 1;
-    }
-    free(temp);
-    return 0;
-}
-
-int grep_v(char *file_path, char *to_find)
-{
-    char    buffer[BUFFER_SIZE];
-    char    *temp;
-    char    *new_temp;
-    ssize_t bytes_read;
-    size_t  index;
-    size_t  capacity;
-    int     fd;
-
-    if(file_path == NULL)
-    {
-        fprintf(stderr, "invalid file path.\n");
-        return 1;
-    }
-    fd = open(file_path, O_RDONLY);
-    if(fd < 0)
-    {
-        perror(file_path);
-        return 1;
-    }
-    temp = malloc(BUFFER_SIZE);
-    if(temp == NULL)
-    {
-        perror("malloc");
-        close(fd);
-        return 1;
-    }
-    index = 0;
-    capacity = BUFFER_SIZE;
-    while((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
-    {
-        for(int i = 0; i < bytes_read; i++)
-        {
-            if(index + 1 >= capacity)
-            {
-                capacity *= 2;
-                new_temp = realloc(temp, capacity);
-                if(new_temp == NULL)
-                {
-                    perror("realloc");
-                    close(fd);
-                    return 1;
-                }
-                temp = new_temp;
-            }
-            temp[index] = buffer[i];
-            if(buffer[i] == '\n')
-            {
-                temp[index + 1] = '\0';
-                if(strstr(temp, to_find) == NULL)
-                {
-                    ft_write(temp, index + 1);
-                }
-                index = 0;
-            }
-            else
-                index++;
-        }
-    }
-    // Handle the last line if the file doesn't end with '\n'
-    if (index > 0 || (bytes_read == 0 && index == 0 && temp[0] != '\0'))
-    {
-        temp[index] = '\0'; // Null-terminate at the actual end
-        if (strstr(temp, to_find) == NULL)
-        {
-            ft_write(temp, index);
-            ft_write("\n", 1); // Ensure standard newline termination
-        }
-    }
-    if(bytes_read < 0)
-    {
-        perror("read");
-        free(temp);
-        close(fd);
-        return 1;
-    }
-    if(close(fd) == -1)
-    {
-        perror("close");
-        free(temp);
-        return 1;
-    }
-    free(temp);
-    return 0;
-}
-
-int grep_c(char *file_path, char *to_find)
-{
-    char    buffer[BUFFER_SIZE];
-    char    *temp;
-    char    *new_temp;
-    ssize_t bytes_read;
-    size_t  capacity;
-    size_t  count;
-    size_t  index;
-    int     fd;
-
-    if(file_path == NULL)
-    {
-        fprintf(stderr, "invalid file path.\n");
-        return 1;
-    }
-    fd = open(file_path, O_RDONLY);
-    if(fd < 0)
-    {
-        perror(file_path);
-        return 1;
-    }
-
-    temp = malloc(BUFFER_SIZE);
-    if(temp == NULL)
-    {
-        perror("malloc");
-        close(fd);
-        return 1;
-    }
-
-    count = 0;
-    index = 0;
-    capacity = BUFFER_SIZE;
-    while((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
-    {
-        for(int i = 0; i < bytes_read; i++)
-        {
-            if(index + 1 >= capacity)
-            {
-                capacity *= 2;
-                new_temp = realloc(temp, capacity);
-                if(new_temp == NULL)
-                {
-                    perror("realloc");
-                    close(fd);
-                    return 1;
-                }
-                temp = new_temp;
-            }
-            temp[index] = buffer[i];
-            if(buffer[i] == '\n')
-            {
-                temp[index + 1] = '\0';
-                if(strstr(temp, to_find) != NULL)
-                    count++;
-                index = 0;
-            }
-            else
-                index++;
-        }
-    }
-    if(index > 0)
-    {
-        temp[index + 1] = '\0';
         if(strstr(temp, to_find) != NULL)
-            count++;
+            match_count++;
+        temp[index] = '\0';  
+        obj->temp = temp;
+        obj->length = index;
+        obj->flag = flag;
+        obj->line_count = line_count;
+        obj->match_count = match_count;
+        apply_flag_grep(obj, to_find);
     }
-    if(bytes_read < 0)
+
+    //handling grep -c flag
+    if (flag != NULL && strcmp(flag, "-c") == 0)
     {
-        perror("read");
-        free(temp);
+        write_number(obj->match_count);
+        write(1, "\n", 1);
+    }
+
+    // If -q finishes the whole file without returning 0, it means no match was found
+    if (flag != NULL && strcmp(flag, "-q") == 0)
+    {
         close(fd);
+        free(temp);
+        free(obj);
         return 1;
     }
+
     if(close(fd) == -1)
     {
         perror("close");
-        free(temp);
+        free(obj->temp);
+        free(obj);
         return 1;
     }
-    free(temp);
 
-    write_num(count);
-    ft_write("\n", 1);
-
+    free(obj->temp);
+    free(obj);
     return 0;
 }
 
-//  Exit code 0: A match was found.
-//  Exit code 1: No match was found.
-//  Exit code >1: An error occurred.
-int grep_q(char *file_path, char *to_find)
-{
-    char    buffer[BUFFER_SIZE];
-    char    *temp;
-    char    *new_temp;
-    size_t  capacity;
-    size_t  index;
-    ssize_t bytes_read;
-    int     fd;
-
-    if(file_path == NULL)
-    {
-        fprintf(stderr, "invalid file path.\n");
-        return 2;
-    }
-    fd = open(file_path, O_RDONLY);
-    if(fd < 0)
-    {
-        perror(file_path);
-        return 2;
-    }
-    temp = malloc(BUFFER_SIZE);
-    if(temp == NULL)
-    {
-        perror("malloc");
-        close(fd);
-        return 2;
-    }
-    index = 0;
-    capacity = BUFFER_SIZE;
-    while((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
-    {
-        for(int i = 0; i < bytes_read; i++)
-        {
-            if(index + 1 >= capacity)
-            {
-                capacity *= 2;
-                new_temp = realloc(temp, capacity);
-                if(new_temp == NULL)
-                {
-                    perror("realloc");
-                    close(fd);
-                    free(temp);
-                    return 2;
-                }
-                temp = new_temp;
-            }
-            temp[index] = buffer[i];
-            if(buffer[i] == '\n')
-            {
-                temp[index] = '\0';
-                if(strstr(temp, to_find) != NULL)
-                {
-                    free(temp);
-                    close(fd);
-                    return 0; //fount match so its done.
-                }
-                index = 0;
-            }
-            else
-                index++;
-        }
-    }
-    if(index > 0)
-    {
-        temp[index] = '\0';
-        if(strstr(temp, to_find) != NULL)
-        {
-            free(temp);
-            close(fd);
-            return 0; //fount match so its done.
-        }
-    }
-        if(bytes_read < 0)
-    {
-        perror("read");
-        free(temp);
-        close(fd);
-        return 1;
-    }
-    if(close(fd) == -1)
-    {
-        perror("close");
-        free(temp);
-        return 1;
-    }
-    free(temp);
-    return 1;
-}
 
 int grep(int ac, char **av)
 {
+    char    *flag = NULL;
+    char    *to_find;
+    int     start_index;
+    int     status = 0;
+
     if (ac < 3)
     {
-        fprintf(stderr, "usage: cunix grep [-n|-v|-c] <pattern> <file...>\n");
+        fprintf(stderr, "usage: grep [flag] pattern [file ...]\n");
         return 1;
     }
 
-    if (strcmp(av[1], "-n") == 0)
+    // Check if av[1] is a flag
+    if (av[1][0] == '-' && av[1][1] != '\0')
     {
-        if (ac < 4)
-        {
-            fprintf(stderr, "grep: missing file argument for -n\n");
-            return 1;
-        }
-        for (int i = 3; i < ac; i++)
-            grep_n(av[i], av[2]);
-    }
-    else if (strcmp(av[1], "-c") == 0)
-    {
-        if (ac < 4)
-        {
-            fprintf(stderr, "grep: missing file argument for -c\n");
-            return 1;
-        }
-        for (int i = 3; i < ac; i++)
-            grep_c(av[i], av[2]);
-    }
-    else if (strcmp(av[1], "-v") == 0)
-    {
-        if (ac < 4)
-        {
-            fprintf(stderr, "grep: missing file argument for -v\n");
-            return 1;
-        }
-        for (int i = 3; i < ac; i++)
-            grep_v(av[i], av[2]);
+        flag = av[1];
+        to_find = av[2];
+        start_index = 3;
     }
     else
     {
-        for (int i = 2; i < ac; i++)
-            grep_function(av[i], av[1]);
+        to_find = av[1];
+        start_index = 2;
+    }
+
+    // If files are provided, iterate through them
+    if (start_index < ac)
+    {
+        for (int i = start_index; i < ac; i++)
+        {
+            if(run_grep(av[i], to_find, flag) != 0)
+                status = 1;
+        }
+        return status;
     }
 
     return 0;
